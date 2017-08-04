@@ -231,7 +231,14 @@ try
         }
         Set-UnattendEnableSwap -Path $unattendedXmlPath
     }
-
+    
+    $installVMwareTools_flag = Get-IniFileValue -Path $configIniPath -Section "DEFAULT" -Key "InstallVMwareTools" -Default $false -AsBoolean
+    if ($installVMwareTools_flag) {
+      $vmwareToolsInstallArgs = "/s /v /qn REBOOT=R /l $ENV:Temp\vmware_tools_install.log"
+      $installerPath = Join-Path $ENV:SystemDrive\UnattendResources "VMware-tools.exe"
+      Set-ItemProperty "HKLM:\Software\Microsoft\Windows\CurrentVersion\RunOnce" -Name 'InstallVMwareTools' -Value "$installerPath $vmwareToolsInstallArgs"
+    }
+    
     & "$ENV:SystemRoot\System32\Sysprep\Sysprep.exe" `/generalize `/oobe `/shutdown `/unattend:"$unattendedXmlPath"
 } catch {
     $host.ui.WriteErrorLine($_.Exception.ToString())
