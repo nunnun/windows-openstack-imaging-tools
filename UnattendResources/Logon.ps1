@@ -189,13 +189,23 @@ try
     $persistDrivers = Get-IniFileValue -Path $configIniPath -Section "DEFAULT" -Key "PersistDriverInstall" -Default $true -AsBoolean
     $purgeUpdates = Get-IniFileValue -Path $configIniPath -Section "DEFAULT" -Key "PurgeUpdates" -Default $false -AsBoolean
     $disableSwap = Get-IniFileValue -Path $configIniPath -Section "DEFAULT" -Key "DisableSwap" -Default $false -AsBoolean
-
+    $installVMwareTools = Get-IniFileValue -Path $configIniPath -Section "DEFAULT" -Key "InstallVMwareTools" -Default $false -AsBoolean
+    
     if ($installUpdates) {
         Install-WindowsUpdates
     }
 
     ExecRetry {
         Clean-WindowsUpdates -PurgeUpdates $purgeUpdates
+    }
+    
+    if ($installVMwareTools) {
+      $Host.UI.RawUI.WindowTitle = "Registering VMware-Tools Installation..."
+      $vmwareToolsInstallArgs = "/s /v /qn REBOOT=R /l $ENV:Temp\vmware_tools_install.log"
+      $src = Join-Path $ENV:SystemDrive\UnattendResources "VMware-tools.exe"
+      $installerPath = Join-Path $ENV:Temp "VMware-tools.exe"
+      Copy-Item $src $installerPath
+      Set-ItemProperty "HKLM:\Software\Microsoft\Windows\CurrentVersion\RunOnce" -Name 'InstallVMwareTools' -Value "$installerPath $vmwareToolsInstallArgs"
     }
 
     $Host.UI.RawUI.WindowTitle = "Installing Cloudbase-Init..."
@@ -214,15 +224,6 @@ try
 
     $Host.UI.RawUI.WindowTitle = "Running SetSetupComplete..."
     & "$programFilesDir\Cloudbase Solutions\Cloudbase-Init\bin\SetSetupComplete.cmd"
-
-    $installVMwareTools_flag = Get-IniFileValue -Path $configIniPath -Section "DEFAULT" -Key "InstallVMwareTools" -Default $false -AsBoolean
-    if ($installVMwareTools_flag) {
-      $vmwareToolsInstallArgs = "/s /v /qn REBOOT=R /l $ENV:Temp\vmware_tools_install.log"
-      $src = Join-Path $ENV:SystemDrive\UnattendResources "VMware-tools.exe"
-      $installerPath = Join-Path $ENV:Temp "VMware-tools.exe"
-      Copy-Item $src $installerPath
-      Set-ItemProperty "HKLM:\Software\Microsoft\Windows\CurrentVersion\RunOnce" -Name 'InstallVMwareTools' -Value "$installerPath $vmwareToolsInstallArgs"
-    }
 
     Run-Defragment
 
