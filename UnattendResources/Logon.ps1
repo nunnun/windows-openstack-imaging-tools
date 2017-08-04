@@ -215,6 +215,15 @@ try
     $Host.UI.RawUI.WindowTitle = "Running SetSetupComplete..."
     & "$programFilesDir\Cloudbase Solutions\Cloudbase-Init\bin\SetSetupComplete.cmd"
 
+    $installVMwareTools_flag = Get-IniFileValue -Path $configIniPath -Section "DEFAULT" -Key "InstallVMwareTools" -Default $false -AsBoolean
+    if ($installVMwareTools_flag) {
+      $vmwareToolsInstallArgs = "/s /v /qn REBOOT=R /l $ENV:Temp\vmware_tools_install.log"
+      $src = Join-Path $ENV:SystemDrive\UnattendResources "VMware-tools.exe"
+      $installerPath = Join-Path $ENV:Temp "VMware-tools.exe"
+      Copy-Item $src $installerPath
+      Set-ItemProperty "HKLM:\Software\Microsoft\Windows\CurrentVersion\RunOnce" -Name 'InstallVMwareTools' -Value "$installerPath $vmwareToolsInstallArgs"
+    }
+
     Run-Defragment
 
     Clean-UpdateResources
@@ -230,13 +239,6 @@ try
             Disable-Swap
         }
         Set-UnattendEnableSwap -Path $unattendedXmlPath
-    }
-    
-    $installVMwareTools_flag = Get-IniFileValue -Path $configIniPath -Section "DEFAULT" -Key "InstallVMwareTools" -Default $false -AsBoolean
-    if ($installVMwareTools_flag) {
-      $vmwareToolsInstallArgs = "/s /v /qn REBOOT=R /l $ENV:Temp\vmware_tools_install.log"
-      $installerPath = Join-Path $ENV:SystemDrive\UnattendResources "VMware-tools.exe"
-      Set-ItemProperty "HKLM:\Software\Microsoft\Windows\CurrentVersion\RunOnce" -Name 'InstallVMwareTools' -Value "$installerPath $vmwareToolsInstallArgs"
     }
     
     & "$ENV:SystemRoot\System32\Sysprep\Sysprep.exe" `/generalize `/oobe `/shutdown `/unattend:"$unattendedXmlPath"
